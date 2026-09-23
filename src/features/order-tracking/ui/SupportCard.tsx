@@ -31,7 +31,7 @@ export function SupportCard({
             <span
               aria-hidden
               className={cn(
-                'size-2 rounded-full',
+                'size-2 shrink-0 rounded-full',
                 support.availability.open ? 'bg-success-solid' : 'bg-neutral-solid',
               )}
             />

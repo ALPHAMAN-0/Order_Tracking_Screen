@@ -126,13 +126,13 @@ export function SupportSheet({
             <ChannelRow
               icon={<MessageCircle />}
               title="Live chat"
-              detail="Typical reply in under 2 minutes · 24/7"
+              detail="Replies in about 2 minutes, 24/7"
               onClick={() => setView('chat')}
             />
             <ChannelRow
               icon={<Phone />}
               title={`Call ${support.phoneLabel}`}
-              detail={`9 AM – 9 PM daily · ${support.availability.open ? 'open now' : 'closed now'}`}
+              detail={`${support.hoursLabel} · ${support.availability.open ? 'open now' : 'closed now'}`}
               href={support.phoneHref}
             />
             <ChannelRow
@@ -143,15 +143,9 @@ export function SupportSheet({
             />
           </div>
 
-          <p className="flex items-center gap-2 text-sm text-fg-muted">
-            <span
-              aria-hidden
-              className={cn(
-                'size-2 rounded-full',
-                support.availability.open ? 'bg-success-solid' : 'bg-neutral-solid',
-              )}
-            />
-            Phone line: {support.availability.label}. Your order number is shared automatically.
+          <p className="text-sm text-fg-muted">
+            Chat and email include order #{support.orderId} automatically, so you won’t need to
+            repeat it.
           </p>
         </div>
       )}

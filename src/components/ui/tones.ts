@@ -32,13 +32,6 @@ export const TONE_SOLID_BG: Record<Tone, string> = {
   neutral: 'bg-neutral-solid',
 };
 
-export const TONE_SOLID_TEXT: Record<Tone, string> = {
-  success: 'text-success-solid',
-  warning: 'text-warning-solid',
-  danger: 'text-danger-solid',
-  neutral: 'text-neutral-solid',
-};
-
 export const TONE_SOLID_BORDER: Record<Tone, string> = {
   success: 'border-success-solid',
   warning: 'border-warning-solid',

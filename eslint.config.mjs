@@ -44,12 +44,26 @@ const eslintConfig = defineConfig([
               message: 'Domain is framework-free (R1).',
             },
             {
+              // Aliased, barrel and relative forms alike.
               group: [
+                '@/lib',
                 '@/lib/*',
+                '@/components',
                 '@/components/*',
+                '@/features/*/data',
                 '@/features/*/data/*',
+                '@/features/*/ui',
                 '@/features/*/ui/*',
+                '@/features/*/hooks',
                 '@/features/*/hooks/*',
+                '../data',
+                '../data/*',
+                '../ui',
+                '../ui/*',
+                '../hooks',
+                '../hooks/*',
+                '**/lib/*',
+                '**/components/*',
               ],
               message: 'Domain may not import outer layers (R1).',
             },
@@ -69,10 +83,16 @@ const eslintConfig = defineConfig([
         {
           patterns: [
             {
+              // Aliased, barrel and relative forms alike; view-model types are the one exception.
               group: [
-                '@/features/order-tracking/domain/*',
-                '!@/features/order-tracking/domain/view-model',
+                '@/features/order-tracking/data',
                 '@/features/order-tracking/data/*',
+                '@/features/order-tracking/domain/*',
+                '**/data',
+                '**/data/*',
+                '**/domain/*',
+                '!@/features/order-tracking/domain/view-model',
+                '!**/domain/view-model',
               ],
               message: 'UI consumes view models via hooks only (R3).',
             },
