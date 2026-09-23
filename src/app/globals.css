@@ -1,26 +1,232 @@
 @import 'tailwindcss';
 
+/*
+ * Design tokens. Components use semantic names (bg-surface, text-fg-muted,
+ * bg-warning-soft…) so light/dark switch here, not in every className.
+ * Status colours: success = on track/delivered, warning = delayed,
+ * danger = significant delay/issue, neutral = pending.
+ * *-solid tokens are for graphics (dots, bars) and meet 3:1 on surfaces;
+ * text tokens meet 4.5:1 on their soft backgrounds.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  color-scheme: light;
+  --canvas: #e9ecf1;
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f2f4f7;
+  --border: #e3e6eb;
+  --border-strong: #c9cfd8;
+  --fg: #0f172a;
+  --fg-muted: #475569;
+  --fg-subtle: #5b6474;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --brand: #4f46e5;
+  --brand-hover: #4338ca;
+  --brand-fg: #ffffff;
+  --brand-soft: #eef2ff;
+  --brand-text: #4338ca;
+
+  --success: #065f46;
+  --success-soft: #ecfdf5;
+  --success-border: #a7f3d0;
+  --success-solid: #059669;
+
+  --warning: #8a3c0b;
+  --warning-soft: #fffbeb;
+  --warning-border: #fcd34d;
+  --warning-solid: #d97706;
+
+  --danger: #b91c1c;
+  --danger-soft: #fef2f2;
+  --danger-border: #fecaca;
+  --danger-solid: #dc2626;
+
+  --neutral: #334155;
+  --neutral-soft: #f1f5f9;
+  --neutral-border: #cbd5e1;
+  --neutral-solid: #64748b;
+
+  --ring: #6366f1;
+  --scrim: rgb(15 23 42 / 0.5);
+  --shadow: 0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.05);
+  --shadow-lg: 0 -8px 32px rgb(15 23 42 / 0.16);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    color-scheme: dark;
+    --canvas: #06070a;
+    --bg: #0b0d12;
+    --surface: #14171e;
+    --surface-2: #1b1f28;
+    --border: #262b36;
+    --border-strong: #3a4150;
+    --fg: #e8eaef;
+    --fg-muted: #a8b1c0;
+    --fg-subtle: #8f99aa;
+
+    --brand: #818cf8;
+    --brand-hover: #a5b4fc;
+    --brand-fg: #0b0d12;
+    --brand-soft: #1e1b4b;
+    --brand-text: #a5b4fc;
+
+    --success: #6ee7b7;
+    --success-soft: #062a1f;
+    --success-border: #065f46;
+    --success-solid: #34d399;
+
+    --warning: #fcd34d;
+    --warning-soft: #2b1d06;
+    --warning-border: #78350f;
+    --warning-solid: #f59e0b;
+
+    --danger: #fca5a5;
+    --danger-soft: #2d0f10;
+    --danger-border: #7f1d1d;
+    --danger-solid: #f87171;
+
+    --neutral: #cbd5e1;
+    --neutral-soft: #1c222c;
+    --neutral-border: #334155;
+    --neutral-solid: #94a3b8;
+
+    --ring: #a5b4fc;
+    --scrim: rgb(0 0 0 / 0.6);
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 -8px 32px rgb(0 0 0 / 0.5);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-fg: var(--brand-fg);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-text: var(--brand-text);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-border: var(--success-border);
+  --color-success-solid: var(--success-solid);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-border: var(--warning-border);
+  --color-warning-solid: var(--warning-solid);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-border: var(--danger-border);
+  --color-danger-solid: var(--danger-solid);
+  --color-neutral: var(--neutral);
+  --color-neutral-soft: var(--neutral-soft);
+  --color-neutral-border: var(--neutral-border);
+  --color-neutral-solid: var(--neutral-solid);
+
+  --color-ring: var(--ring);
+  --color-scrim: var(--scrim);
+  --shadow-card: var(--shadow);
+  --shadow-sheet: var(--shadow-lg);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    background: var(--canvas);
+  }
+
+  body {
+    background: var(--canvas);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Tailwind v4 defaults borders to currentColor; use the token instead. */
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  button,
+  [role='button'] {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
+/* Bottom sheet built on <dialog>. */
+dialog.sheet {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  overflow: hidden;
+}
+
+dialog.sheet::backdrop {
+  background: var(--scrim);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+dialog.sheet[data-state='open']::backdrop {
+  opacity: 1;
+}
+
+dialog.sheet .sheet-panel {
+  transform: translateY(100%);
+  transition: transform 240ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+dialog.sheet[data-state='open'] .sheet-panel {
+  transform: translateY(var(--drag, 0px));
+}
+
+dialog.sheet[data-dragging] .sheet-panel {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  dialog.sheet::backdrop,
+  dialog.sheet .sheet-panel {
+    transition-duration: 0s;
+  }
+}
+
+dialog.sheet[open] {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
 }
