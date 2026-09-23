@@ -21,6 +21,9 @@ function onVisibility() {
 function subscribe(listener: () => void) {
   listeners.add(listener);
   if (listeners.size === 1) {
+    // The cached time may be stale if nothing was subscribed for a while
+    // (e.g. after client-side navigation); React re-reads the snapshot.
+    snapshot = clock.now();
     timer = setInterval(tick, TICK_MS);
     document.addEventListener('visibilitychange', onVisibility);
   }

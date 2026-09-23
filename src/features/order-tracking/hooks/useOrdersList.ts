@@ -9,8 +9,6 @@ import { readItem, subscribe } from '@/lib/storage';
 import { useOrderRepository } from './repository-context';
 import { useRequest } from './useRequest';
 
-const SEP = '␞';
-
 /** "My orders": list items derived with the same view model as the tracking screen. */
 export function useOrdersList(simulateParam: string | null): {
   view: 'loading' | 'error' | 'empty' | 'ready';
@@ -24,24 +22,21 @@ export function useOrdersList(simulateParam: string | null): {
   const now = useNow();
   const orders = useMemo(() => (state.status === 'success' ? state.data : []), [state]);
 
-  // One stable string snapshot of every order's stored customer state.
-  const ids = orders.map((o) => o.id).join(SEP);
+  // One stable, comparable snapshot of every order's stored customer state.
+  const idsKey = JSON.stringify(orders.map((o) => o.id));
   const getSnapshot = useCallback(
     () =>
-      ids
-        .split(SEP)
-        .map((id) => (id ? (readItem(clientStateKey(id)) ?? '') : ''))
-        .join(SEP),
-    [ids],
+      JSON.stringify((JSON.parse(idsKey) as string[]).map((id) => readItem(clientStateKey(id)))),
+    [idsKey],
   );
-  const rawStates = useSyncExternalStore(subscribe, getSnapshot, () => '');
+  const rawStates = useSyncExternalStore(subscribe, getSnapshot, () => '[]');
 
   const items = useMemo(() => {
     if (now === null) return [];
-    const raws = rawStates.split(SEP);
+    const raws = JSON.parse(rawStates) as (string | null)[];
     return orders.map(
       (order, i) =>
-        deriveTrackingView({ order, now, clientState: parseClientState(raws[i] || null) }).listItem,
+        deriveTrackingView({ order, now, clientState: parseClientState(raws[i] ?? null) }).listItem,
     );
   }, [orders, now, rawStates]);
 
