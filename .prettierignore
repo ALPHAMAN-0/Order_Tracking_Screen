@@ -7,3 +7,4 @@ coverage
 docs/screenshots
 next-env.d.ts
 .vercel
+AI_PROMPT_HISTORY.md
