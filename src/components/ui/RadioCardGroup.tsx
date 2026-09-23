@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, type Ref } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { cn } from '@/lib/cn';
 
 export interface RadioOption<T extends string> {
@@ -16,7 +16,6 @@ export function RadioCardGroup<T extends string>({
   value,
   onChange,
   error,
-  ref,
 }: {
   legend: string;
   name: string;
@@ -24,12 +23,18 @@ export function RadioCardGroup<T extends string>({
   value: T | null;
   onChange: (value: T) => void;
   error?: string;
-  ref?: Ref<HTMLFieldSetElement>;
 }) {
   const errorId = useId();
+  const fieldsetRef = useRef<HTMLFieldSetElement>(null);
+
+  // Focus the group once the error has rendered, so it's read with the field.
+  useEffect(() => {
+    if (error) fieldsetRef.current?.focus();
+  }, [error]);
+
   return (
     <fieldset
-      ref={ref}
+      ref={fieldsetRef}
       tabIndex={-1}
       aria-invalid={error ? true : undefined}
       aria-describedby={error ? errorId : undefined}
@@ -64,7 +69,7 @@ export function RadioCardGroup<T extends string>({
         ))}
       </div>
       {error && (
-        <p id={errorId} className="mt-2 text-sm font-medium text-danger">
+        <p id={errorId} role="alert" className="mt-2 text-sm font-medium text-danger">
           {error}
         </p>
       )}

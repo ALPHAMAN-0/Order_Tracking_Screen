@@ -18,7 +18,8 @@ export function StatusHero({ vm }: { vm: TrackingViewModel }) {
       </StatusPill>
       <h1
         id="status-headline"
-        className="mt-3 text-[26px] leading-tight font-bold tracking-tight text-balance text-fg"
+        tabIndex={-1}
+        className="mt-3 text-[26px] leading-tight font-bold tracking-tight text-balance text-fg outline-none"
       >
         {hero.headline}
       </h1>

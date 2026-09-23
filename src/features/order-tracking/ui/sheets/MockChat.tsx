@@ -34,6 +34,7 @@ export function MockChat({
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
   const inputId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
@@ -48,6 +49,8 @@ export function MockChat({
     const replied = messages.some((m) => m.from === 'me');
     setMessages((m) => [...m, { id: m.length, from: 'me', text }]);
     setDraft('');
+    // Keep keyboard focus in the composer after sending.
+    inputRef.current?.focus();
     setTyping(true);
     timers.current.push(
       setTimeout(() => {
@@ -105,6 +108,7 @@ export function MockChat({
           Message
         </label>
         <input
+          ref={inputRef}
           id={inputId}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -115,8 +119,9 @@ export function MockChat({
         <button
           type="submit"
           aria-label="Send message"
-          disabled={!draft.trim() || typing}
-          className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand text-brand-fg disabled:opacity-50"
+          // aria-disabled (not disabled) so the focused button never drops focus.
+          aria-disabled={!draft.trim() || typing}
+          className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand text-brand-fg aria-disabled:opacity-50"
         >
           <SendHorizontal aria-hidden className="size-5" />
         </button>

@@ -8,6 +8,7 @@ export function StatusBanner({
   tone,
   icon: Icon,
   title,
+  reference,
   body,
   meta,
   steps,
@@ -16,6 +17,7 @@ export function StatusBanner({
   tone: Tone;
   icon: LucideIcon;
   title: string;
+  reference?: string;
   body: string;
   meta?: string;
   steps?: string[];
@@ -32,6 +34,12 @@ export function StatusBanner({
             className={cn('text-[15px] font-semibold outline-none', TONE_TEXT[tone])}
           >
             {title}
+            {reference && (
+              <>
+                {' '}
+                <span className="whitespace-nowrap">· {reference}</span>
+              </>
+            )}
           </h2>
           <p className="mt-1 text-sm text-fg">{body}</p>
           {meta && <p className="mt-1 text-sm font-medium text-fg">{meta}</p>}

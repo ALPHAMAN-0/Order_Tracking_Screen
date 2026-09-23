@@ -44,8 +44,9 @@ test('significant delay → cancel with refund', async ({ page }) => {
   await sheet.getByRole('button', { name: 'Done' }).click();
   await expect(sheet).toBeHidden();
   await expect(
-    page.getByRole('main').getByRole('heading', { name: 'Cancellation requested' }),
+    page.getByRole('main').getByRole('heading', { name: /^Cancellation requested · RF-/ }),
   ).toBeFocused();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Refund on its way');
   await expect(page.getByRole('button', { name: 'Request refund or cancel' })).toHaveCount(0);
 });
 

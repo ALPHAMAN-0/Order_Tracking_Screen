@@ -46,12 +46,13 @@ export function Switch({
         aria-hidden
         className={cn(
           'relative inline-flex h-7 w-12 shrink-0 rounded-full border-2 border-transparent transition-colors motion-reduce:transition-none',
-          checked ? 'bg-brand' : 'bg-border-strong',
+          // Off track uses a graphics-contrast token (≥ 3:1 against the card).
+          checked ? 'bg-brand' : 'bg-neutral-solid',
         )}
       >
         <span
           className={cn(
-            'inline-block size-6 rounded-full bg-white shadow-sm transition-transform motion-reduce:transition-none',
+            'inline-block size-6 rounded-full bg-surface shadow-sm transition-transform motion-reduce:transition-none',
             checked ? 'translate-x-5' : 'translate-x-0',
           )}
         />

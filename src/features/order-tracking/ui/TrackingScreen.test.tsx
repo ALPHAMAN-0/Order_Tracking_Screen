@@ -69,8 +69,14 @@ describe('TrackingScreen', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: 'Done' }));
     expect(
-      await screen.findByRole('heading', { name: 'Cancellation requested' }),
+      await screen.findByRole('heading', { level: 1, name: 'Refund on its way' }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /^Cancellation requested · RF-[A-Z0-9]{6}$/ }),
+    ).toBeInTheDocument();
+    // No leftover delivery promises once cancelled.
+    expect(screen.queryByText('New estimate')).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Notify me of changes' })).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Request refund or cancel' }),
     ).not.toBeInTheDocument();

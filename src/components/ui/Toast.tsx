@@ -19,15 +19,31 @@ export function useToast(): ShowToast {
   return useContext(ToastContext);
 }
 
-/** One polite live region; the latest message replaces the previous one. */
+/**
+ * One polite live region; the latest message replaces the previous one.
+ * While a modal sheet is open the page behind it is inert (hidden from
+ * assistive tech and covered visually), so a toast waits for the sheet to
+ * close. In-sheet feedback belongs inside the sheet itself.
+ */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
   const counter = useRef(0);
+  const pending = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const show = useCallback<ShowToast>((message) => {
-    counter.current += 1;
-    setToast({ id: counter.current, message });
+    clearTimeout(pending.current);
+    const deliver = (attempt: number) => {
+      if (attempt < 30 && document.querySelector('dialog[open]')) {
+        pending.current = setTimeout(() => deliver(attempt + 1), 50);
+        return;
+      }
+      counter.current += 1;
+      setToast({ id: counter.current, message });
+    };
+    deliver(0);
   }, []);
+
+  useEffect(() => () => clearTimeout(pending.current), []);
 
   useEffect(() => {
     if (!toast) return;

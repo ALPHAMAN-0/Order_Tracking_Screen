@@ -2,6 +2,7 @@
 
 import {
   Building2,
+  Check,
   ChevronLeft,
   CircleCheck,
   Copy,
@@ -10,7 +11,7 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
-import { useRef, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { RadioCardGroup } from '@/components/ui/RadioCardGroup';
@@ -45,26 +46,31 @@ export function MissingPackageFlow({
   const [note, setNote] = useState('');
   const [error, setError] = useState<string>();
   const [caseId, setCaseId] = useState<string | null>(null);
-  const reasonsRef = useRef<HTMLFieldSetElement>(null);
+  const [copied, setCopied] = useState(false);
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => () => clearTimeout(copiedTimer.current), []);
 
   function submit() {
     if (!reason) {
       setError('Choose what happened to continue.');
-      reasonsRef.current?.focus();
       return;
     }
     setCaseId(onSubmit({ reason, note }));
     setStep(3);
   }
 
+  // Feedback lives inside the sheet: a page toast would sit behind the modal.
   async function copyCase() {
     if (!caseId) return;
     try {
       await navigator.clipboard.writeText(caseId);
-      toast('Case reference copied.');
     } catch {
-      toast(`Case reference: ${caseId}`);
+      return;
     }
+    setCopied(true);
+    clearTimeout(copiedTimer.current);
+    copiedTimer.current = setTimeout(() => setCopied(false), 2000);
   }
 
   const titles: Record<Step, string> = {
@@ -158,7 +164,6 @@ export function MissingPackageFlow({
       {step === 2 && (
         <div className="flex flex-col gap-5">
           <RadioCardGroup
-            ref={reasonsRef}
             legend="Choose the closest match"
             name="missing-reason"
             options={flow.reasons}
@@ -185,9 +190,12 @@ export function MissingPackageFlow({
             <p className="mt-2 text-sm text-fg">Your case reference</p>
             <p className="font-mono text-lg font-semibold tracking-wide text-fg">{caseId}</p>
             <Button variant="ghost" size="sm" onClick={copyCase} className="mt-1">
-              <Copy aria-hidden />
-              Copy reference
+              {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
+              {copied ? 'Copied' : 'Copy reference'}
             </Button>
+            <span role="status" className="sr-only">
+              {copied ? 'Case reference copied' : ''}
+            </span>
           </div>
           <div>
             <h3 className="text-sm font-semibold text-fg">What happens next</h3>

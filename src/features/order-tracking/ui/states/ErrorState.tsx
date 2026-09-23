@@ -23,7 +23,7 @@ export function ErrorState({
       actions={
         <>
           {onRetry && (
-            <Button fullWidth onClick={onRetry}>
+            <Button fullWidth onClick={onRetry} data-retry>
               <RefreshCw aria-hidden />
               Try again
             </Button>

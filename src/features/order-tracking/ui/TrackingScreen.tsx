@@ -2,7 +2,7 @@
 
 import { FileSearch, Hourglass, MessageCircle, ReceiptText } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import { useRef, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
 import type {
@@ -68,6 +68,18 @@ function TrackingScreenInner({ orderId, simulate }: { orderId: string; simulate:
   const toast = useToast();
   const [state, setState] = useState<SheetState>({ open: false, session: 0, sheet: null });
   const outcomeHeadingRef = useRef<HTMLHeadingElement>(null);
+  const retried = useRef(false);
+
+  // After "Try again", the button unmounts: put focus somewhere meaningful.
+  useEffect(() => {
+    if (!retried.current || view === 'loading') return;
+    retried.current = false;
+    const target =
+      view === 'ready'
+        ? document.getElementById('status-headline')
+        : document.querySelector<HTMLElement>('[data-retry]');
+    target?.focus();
+  }, [view]);
 
   const openSheet = (sheet: Sheet) =>
     setState((s) => ({ open: true, session: s.session + 1, sheet }));
@@ -83,7 +95,7 @@ function TrackingScreenInner({ orderId, simulate }: { orderId: string; simulate:
     if (!vm) return;
     switch (id) {
       case 'contact_support':
-        openSupport(vm.support.topic, vm.status === 'investigating' ? 'chat' : 'channels');
+        openSupport(vm.support.topic, vm.support.initialView);
         break;
       case 'report_missing':
         if (vm.missingFlow) openSheet({ kind: 'missing', flow: vm.missingFlow });
@@ -102,10 +114,20 @@ function TrackingScreenInner({ orderId, simulate }: { orderId: string; simulate:
     <>
       <TrackingHeader orderId={orderId} onHelp={support ? () => openSupport() : undefined} />
       <main id="main" className="flex flex-col gap-3 pt-2">
+        <p aria-live="polite" className="sr-only">
+          {view === 'loading'
+            ? 'Loading your order…'
+            : vm
+              ? `Order loaded: ${vm.hero.headline}`
+              : ''}
+        </p>
         {view === 'loading' && <TrackingSkeleton />}
         {view === 'error' && (
           <ErrorState
-            onRetry={retry}
+            onRetry={() => {
+              retried.current = true;
+              retry();
+            }}
             onContactSupport={support ? () => openSupport() : undefined}
           />
         )}
@@ -206,7 +228,8 @@ function TrackingContent({
         <StatusBanner
           tone="danger"
           icon={FileSearch}
-          title={`${vm.caseBanner.title} · ${vm.caseBanner.caseId}`}
+          title={vm.caseBanner.title}
+          reference={vm.caseBanner.reference}
           body={vm.caseBanner.body}
           meta={vm.caseBanner.nextUpdateLabel}
           steps={vm.caseBanner.steps}
@@ -218,6 +241,7 @@ function TrackingContent({
           tone="neutral"
           icon={ReceiptText}
           title={vm.cancellationBanner.title}
+          reference={vm.cancellationBanner.reference}
           body={vm.cancellationBanner.body}
           headingRef={outcomeHeadingRef}
         />

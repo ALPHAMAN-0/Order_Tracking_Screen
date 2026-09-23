@@ -1,7 +1,7 @@
 'use client';
 
 import { CircleCheck } from 'lucide-react';
-import { useRef, useState, type RefObject } from 'react';
+import { useState, type RefObject } from 'react';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { RadioCardGroup } from '@/components/ui/RadioCardGroup';
@@ -28,12 +28,10 @@ export function RefundCancelSheet({
   const [choice, setChoice] = useState<Choice | null>(null);
   const [error, setError] = useState<string>();
   const [refId, setRefId] = useState<string | null>(null);
-  const groupRef = useRef<HTMLFieldSetElement>(null);
 
   function confirm() {
     if (!choice) {
       setError('Choose an option to continue.');
-      groupRef.current?.focus();
       return;
     }
     if (choice === 'keep') {
@@ -70,7 +68,6 @@ export function RefundCancelSheet({
         </div>
       ) : (
         <RadioCardGroup
-          ref={groupRef}
           legend="Your options"
           name="refund-choice"
           value={choice}

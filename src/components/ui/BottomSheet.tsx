@@ -71,7 +71,9 @@ export function BottomSheet({
 
     if (open) {
       if (dialog.open) {
+        // Re-run of this effect (e.g. React StrictMode) — restore the lock too.
         dialog.dataset.state = 'open';
+        document.documentElement.style.overflow = 'hidden';
         return;
       }
       returnFocus.current = document.activeElement as HTMLElement | null;
