@@ -8,6 +8,7 @@ import {
 import { DAY, HOUR, dhakaDayDiff, toMs } from './time';
 import {
   MILESTONES,
+  type EtaWindow,
   type Milestone,
   type Order,
   type OrderClientState,
@@ -26,8 +27,12 @@ export interface StatusFacts {
   delivered: boolean;
   deliveredAt: number | null;
   promisedEnd: number;
-  /** Revised window end if the carrier revised it, else the promise. */
+  /** Revised window end if the carrier revised it (and it still applies), else the promise. */
   expectedBy: number;
+  /** Whether the carrier's revised window is the one in force. */
+  useRevision: boolean;
+  /** The delivery window currently in force (revised or promised). */
+  expectedWindow: EtaWindow;
   overdue: boolean;
   delayDays: number;
   severity: Severity;
@@ -63,7 +68,11 @@ export function deriveFacts(order: Order, now: number): StatusFacts {
 
   const promisedEnd = toMs(order.promisedWindow.end);
   const revised = order.shipment?.revisedWindow;
-  const expectedBy = revised ? toMs(revised.end) : promisedEnd;
+  const revisedEnd = revised ? toMs(revised.end) : null;
+  // A carrier estimate EARLIER than the promise stops counting once it passes:
+  // the customer was never promised that date, so missing it isn't "late".
+  const useRevision = revisedEnd !== null && (revisedEnd >= promisedEnd || now <= revisedEnd);
+  const expectedBy = useRevision ? revisedEnd : promisedEnd;
   const overdue = !delivered && now > expectedBy;
 
   const reference = overdue ? now : expectedBy;
@@ -90,11 +99,13 @@ export function deriveFacts(order: Order, now: number): StatusFacts {
     deliveredAt,
     promisedEnd,
     expectedBy,
+    useRevision,
+    expectedWindow: useRevision && revised ? revised : order.promisedWindow,
     overdue,
     delayDays,
     severity,
     etaChanged,
-    revisedAlsoPassed: !!revised && overdue,
+    revisedAlsoPassed: useRevision && overdue,
     stalePending:
       !trackingLive && !delivered && now - toMs(order.placedAt) > TRACKING_STALE_HOURS * HOUR,
     latestEvent: events.at(-1) ?? null,
@@ -108,12 +119,13 @@ export function deriveFacts(order: Order, now: number): StatusFacts {
 
 /**
  * Status precedence — the first matching row wins:
- * 1. delivered + open case → investigating
- * 2. delivered             → delivered
- * 3. severe delay          → severely_late
- * 4. late                  → late
- * 5. no carrier scans yet  → preparing
- * 6. otherwise             → on_track
+ * 1. delivered + open case     → investigating
+ * 2. delivered                 → delivered
+ * 3. cancellation requested    → cancelled
+ * 4. severe delay              → severely_late
+ * 5. late                      → late
+ * 6. no carrier scans yet      → preparing
+ * 7. otherwise                 → on_track
  */
 export function resolveStatus(
   facts: StatusFacts,
@@ -121,6 +133,7 @@ export function resolveStatus(
 ): { status: TrackingStatus; tone: Tone } {
   if (facts.delivered && clientState.case) return { status: 'investigating', tone: 'danger' };
   if (facts.delivered) return { status: 'delivered', tone: 'success' };
+  if (clientState.cancellation) return { status: 'cancelled', tone: 'neutral' };
   if (facts.severity === 'severe') return { status: 'severely_late', tone: 'danger' };
   if (facts.severity === 'late') return { status: 'late', tone: 'warning' };
   if (!facts.trackingLive) return { status: 'preparing', tone: 'neutral' };

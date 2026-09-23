@@ -17,6 +17,7 @@ export const STATUS_PILL: Record<TrackingStatus, string> = {
   severely_late: 'Significantly delayed',
   delivered: 'Delivered',
   investigating: 'Investigation open',
+  cancelled: 'Cancelling',
 };
 
 export const PLACEMENT_LABEL: Record<PodPlacement, string> = {

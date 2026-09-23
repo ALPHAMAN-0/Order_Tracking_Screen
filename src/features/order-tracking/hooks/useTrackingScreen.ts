@@ -66,7 +66,10 @@ export function useTrackingScreen(
   );
 
   const fallbackSupport = useMemo(
-    () => (now === null ? null : buildSupportContext({ orderId }, 'where_is_order', now)),
+    () =>
+      now === null
+        ? null
+        : buildSupportContext({ orderId, stage: 'unknown' }, 'where_is_order', now),
     [orderId, now],
   );
 

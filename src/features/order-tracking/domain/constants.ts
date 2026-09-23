@@ -16,7 +16,6 @@ export const REPORT_WINDOW_DAYS = 14;
 export const MISSING_WAIT_HOURS = 24;
 export const CASE_UPDATE_HOURS = 48;
 
-export const STORE_NAME = 'Haatbox';
 export const SUPPORT_TEAM = 'Haatbox Care';
 export const SUPPORT_AGENT = 'Nusrat';
 export const SUPPORT_HOURS = { open: '09:00', close: '21:00' } as const;

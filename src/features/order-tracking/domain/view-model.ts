@@ -6,7 +6,7 @@
 export type Tone = 'success' | 'warning' | 'danger' | 'neutral';
 
 export type TrackingStatus =
-  'preparing' | 'on_track' | 'late' | 'severely_late' | 'delivered' | 'investigating';
+  'preparing' | 'on_track' | 'late' | 'severely_late' | 'delivered' | 'investigating' | 'cancelled';
 
 export type ActionId = 'contact_support' | 'report_missing' | 'request_refund_or_cancel';
 export type ToggleId = 'notify_changes' | 'notify_tracking_live';
@@ -77,7 +77,6 @@ export interface HeroView {
 export interface DelayView {
   tone: Tone;
   title: string;
-  delayLabel: string;
   reason: string;
   reassurance: string;
   toggle: ToggleView;
@@ -101,16 +100,17 @@ export interface ProofOfDeliveryView {
 }
 
 export interface CaseBannerView {
-  caseId: string;
   title: string;
+  /** Case reference, shown after the title and never broken across lines. */
+  reference: string;
   body: string;
   nextUpdateLabel: string;
   steps: string[];
 }
 
 export interface CancellationBannerView {
-  refId: string;
   title: string;
+  reference: string;
   body: string;
 }
 
@@ -123,8 +123,12 @@ export interface ChatScript {
 export interface SupportContextView {
   orderId: string;
   topic: TopicId;
+  /** Which support view a "contact support" action opens. */
+  initialView: 'channels' | 'chat';
   topics: { id: TopicId; label: string }[];
   availability: { open: boolean; label: string };
+  /** "9 AM – 9 PM daily" */
+  hoursLabel: string;
   phoneHref: string;
   phoneLabel: string;
   emailLabel: string;
@@ -144,7 +148,6 @@ export interface ItemView {
 }
 
 export interface OrderSummaryView {
-  title: string;
   countLabel: string;
   totalLabel: string;
   items: ItemView[];
@@ -165,8 +168,12 @@ export interface OrderDetailsView {
 export interface OrderListItemView {
   id: string;
   href: string;
+  /** First item name — may truncate. */
   title: string;
-  meta: string;
+  /** "+ 1 more" — never truncated. */
+  titleMore?: string;
+  orderRef: string;
+  placedLabel: string;
   status: TrackingStatus;
   tone: Tone;
   chip: string;
@@ -189,7 +196,6 @@ export interface MissingFlowView {
 
 export interface RefundFlowView {
   delayLabel: string;
-  isCod: boolean;
   cancelLabel: string;
   cancelDescription: string;
   keepLabel: string;

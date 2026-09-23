@@ -1,20 +1,23 @@
+import { TRACKING_EXPECTED_HOURS } from './constants';
 import { PLACEMENT_LABEL, STATUS_PILL, STEP_LABEL, delayReason } from './copy';
 import { missingFlowView, refundFlowView } from './flows';
 import {
   formatDate,
   formatDateTime,
   formatDateTimePhrase,
+  formatDayMonth,
   formatMoney,
   formatPayment,
   formatWeekdayLong,
   formatWindow,
+  formatWindowPhrase,
   maskAddress,
   plural,
   relativeDayName,
 } from './format';
 import { orderDetailsView, orderSummaryView, orderTitle } from './order-summary';
 import { deriveFacts, resolveStatus, type StatusFacts } from './status';
-import { buildSupportContext, type SupportFacts } from './support';
+import { buildSupportContext, type SupportFacts, type SupportStage } from './support';
 import { timelineView } from './timeline';
 import { dhakaDayDiff, toMs } from './time';
 import { MILESTONES, type Order, type OrderClientState } from './types';
@@ -51,17 +54,20 @@ export function deriveTrackingView({ order, now, clientState }: DeriveInput): Tr
   const actions = actionsFor(ctx);
   const reason = reasonText(ctx);
   const pod = order.shipment?.proofOfDelivery;
+  const etaLabel = etaPhrase(ctx);
 
   const supportFacts: SupportFacts = {
     orderId: order.id,
+    stage: supportStage(status),
     firstName: order.customerFirstName,
     statusLine: hero.headline,
-    ...(facts.delivered ? {} : { etaLabel: etaPhrase(ctx) }),
+    ...(etaLabel ? { etaLabel } : {}),
     ...(facts.severity !== 'none' ? { reason } : {}),
     ...(facts.deliveredAt !== null
       ? { deliveredLabel: formatDateTimePhrase(facts.deliveredAt, now) }
       : {}),
     ...(clientState.case && facts.delivered ? { caseId: clientState.case.id } : {}),
+    canCancel: status === 'severely_late',
   };
 
   const vm: TrackingViewModel = {
@@ -76,7 +82,12 @@ export function deriveTrackingView({ order, now, clientState }: DeriveInput): Tr
       label: `Step ${facts.milestoneIndex + 1} of ${MILESTONES.length}: ${STEP_LABEL[facts.milestone]}`,
     },
     timeline: timelineView(order, facts, status, tone, clientState, now),
-    support: buildSupportContext(supportFacts, topicFor(ctx), now),
+    support: buildSupportContext(
+      supportFacts,
+      topicFor(ctx),
+      now,
+      status === 'investigating' ? 'chat' : 'channels',
+    ),
     summary: orderSummaryView(order),
     details: orderDetailsView(order),
     listItem: listItemView(ctx, hero),
@@ -84,7 +95,9 @@ export function deriveTrackingView({ order, now, clientState }: DeriveInput): Tr
   };
 
   if (status === 'late' || status === 'severely_late') vm.delay = delayView(ctx, reason);
-  if (!facts.trackingLive && !facts.delivered) vm.pending = pendingView(ctx);
+  if (!facts.trackingLive && !facts.delivered && status !== 'cancelled') {
+    vm.pending = pendingView(ctx);
+  }
 
   if (facts.delivered && facts.deliveredAt !== null) {
     vm.proofOfDelivery = {
@@ -101,8 +114,8 @@ export function deriveTrackingView({ order, now, clientState }: DeriveInput): Tr
   if (status === 'investigating' && clientState.case) {
     const flow = missingFlowView(order, facts, now);
     vm.caseBanner = {
-      caseId: clientState.case.id,
       title: 'Investigation open',
+      reference: clientState.case.id,
       body: 'We’ve asked the carrier to check the rider’s GPS trail and delivery photo.',
       nextUpdateLabel: `Next update by ${formatDateTimePhrase(toMs(clientState.case.nextUpdateBy), now)}`,
       steps: flow?.nextSteps ?? [],
@@ -114,18 +127,18 @@ export function deriveTrackingView({ order, now, clientState }: DeriveInput): Tr
     if (flow) vm.missingFlow = flow;
   }
 
-  if (clientState.cancellation && (status === 'late' || status === 'severely_late')) {
+  if (status === 'cancelled' && clientState.cancellation) {
     const { id, refund } = clientState.cancellation;
     vm.cancellationBanner = {
-      refId: id,
       title: 'Cancellation requested',
+      reference: id,
       body: refund
-        ? `${formatMoney(refund)} goes back to ${formatPayment(order.payment)} within 5–7 business days. Reference ${id}.`
-        : `Nothing was charged — cash on delivery orders are simply cancelled. Reference ${id}.`,
+        ? `We’ve asked the carrier to return the parcel. ${formatMoney(refund)} goes back to ${formatPayment(order.payment)} within 5–7 business days, and you’ll get an SMS when it’s processed.`
+        : 'We’ve asked the carrier to return the parcel. Nothing was charged, so there’s nothing to refund.',
     };
-  } else if (status === 'severely_late') {
-    vm.refundFlow = refundFlowView(order, facts);
   }
+
+  if (status === 'severely_late') vm.refundFlow = refundFlowView(order, facts);
 
   return vm;
 }
@@ -141,24 +154,48 @@ interface Ctx {
   now: number;
 }
 
+function supportStage(status: TrackingStatus): SupportStage {
+  switch (status) {
+    case 'preparing':
+      return 'preparing';
+    case 'on_track':
+      return 'in_transit';
+    case 'late':
+    case 'severely_late':
+      return 'late';
+    case 'delivered':
+    case 'investigating':
+      return 'delivered';
+    case 'cancelled':
+      return 'cancelled';
+  }
+}
+
 /** "today" | "tomorrow" | "on Sat, 26 Sep" */
 function dayPhrase(ms: number, now: number): string {
   const rel = relativeDayName(ms, now);
   return rel ? rel.toLowerCase() : `on ${formatDate(ms)}`;
 }
 
-function hasNewEstimate({ order, facts }: Ctx): boolean {
-  return !!order.shipment?.revisedWindow && !facts.revisedAlsoPassed;
+function hasNewEstimate({ facts }: Ctx): boolean {
+  return facts.useRevision && facts.etaChanged && !facts.revisedAlsoPassed;
 }
 
+/** Mid-sentence estimate for support copy, or undefined when there's no trustworthy date. */
 function etaPhrase(ctx: Ctx): string | undefined {
-  const { facts, now } = ctx;
+  const { facts, status, now } = ctx;
+  if (facts.delivered || status === 'cancelled') return undefined;
   if (facts.severity !== 'none' && !hasNewEstimate(ctx)) return undefined;
-  return dayPhrase(facts.expectedBy, now);
+  return formatWindowPhrase(facts.expectedWindow, now);
+}
+
+function refundLine(order: Order, clientState: OrderClientState) {
+  const refund = clientState.cancellation?.refund;
+  return refund ? { amount: formatMoney(refund), to: formatPayment(order.payment) } : null;
 }
 
 function heroView(ctx: Ctx): HeroView {
-  const { facts, status, clientState, now } = ctx;
+  const { order, facts, status, clientState, now } = ctx;
   const pill = STATUS_PILL[status];
   const location = facts.latestEvent?.location;
 
@@ -207,10 +244,12 @@ function heroView(ctx: Ctx): HeroView {
       return {
         pill,
         headline: 'Preparing your order',
-        subline: 'Tracking appears once the carrier scans your parcel — usually within 24 hours.',
+        subline: facts.stalePending
+          ? 'The carrier hasn’t collected it yet — this is taking longer than usual.'
+          : `Tracking appears once the carrier scans your parcel — usually within ${TRACKING_EXPECTED_HOURS} hours.`,
       };
     case 'delivered': {
-      const pod = ctx.order.shipment?.proofOfDelivery;
+      const pod = order.shipment?.proofOfDelivery;
       const at = facts.deliveredAt ?? now;
       const rel = relativeDayName(at, now);
       return {
@@ -229,14 +268,37 @@ function heroView(ctx: Ctx): HeroView {
           : 'Your report is with our team.',
       };
     }
+    case 'cancelled': {
+      const refund = refundLine(order, clientState);
+      return {
+        pill,
+        headline: refund ? 'Refund on its way' : 'Order cancelled',
+        subline: 'The parcel is being returned to the seller.',
+      };
+    }
   }
 }
 
 function etaView(ctx: Ctx): EtaView {
-  const { order, facts, status, tone, now } = ctx;
+  const { order, facts, status, tone, clientState, now } = ctx;
   let view: Omit<EtaView, 'a11y'>;
 
-  if (facts.delivered) {
+  if (status === 'cancelled') {
+    const refund = refundLine(order, clientState);
+    view = refund
+      ? {
+          label: 'Refund expected',
+          value: 'Within 5–7 business days',
+          window: `${refund.amount} to ${refund.to}`,
+          note: { tone: 'neutral', text: 'Delivery cancelled' },
+        }
+      : {
+          label: 'Refund',
+          value: 'Nothing to refund',
+          window: 'Cash on delivery — nothing was charged',
+          note: { tone: 'neutral', text: 'Delivery cancelled' },
+        };
+  } else if (facts.delivered) {
     view = {
       label: status === 'investigating' ? 'Marked delivered' : 'Delivered',
       value: formatDateTime(facts.deliveredAt ?? now, now),
@@ -245,13 +307,9 @@ function etaView(ctx: Ctx): EtaView {
         : {}),
     };
   } else if (facts.severity !== 'none') {
-    const fresh = hasNewEstimate(ctx);
-    const win =
-      fresh && order.shipment?.revisedWindow
-        ? formatWindow(order.shipment.revisedWindow, now)
-        : null;
+    const win = hasNewEstimate(ctx) ? formatWindow(facts.expectedWindow, now) : null;
     view = {
-      label: fresh ? 'New estimate' : 'Estimated delivery',
+      label: win ? 'New estimate' : 'Estimated delivery',
       value: win?.value ?? 'Awaiting a new date',
       ...(win?.window ? { window: win.window } : {}),
       was: formatDate(facts.promisedEnd),
@@ -265,14 +323,14 @@ function etaView(ctx: Ctx): EtaView {
       },
     };
   } else {
-    const win = formatWindow(order.shipment?.revisedWindow ?? order.promisedWindow, now);
+    const win = formatWindow(facts.expectedWindow, now);
     view = {
       label: 'Estimated delivery',
       value: win.value,
       ...(win.window ? { window: win.window } : {}),
       ...(status === 'preparing'
         ? { note: { tone: 'neutral', text: 'Based on your order date' } }
-        : facts.etaChanged
+        : facts.useRevision && facts.etaChanged
           ? { note: { tone: 'neutral', text: 'Updated by the carrier' } }
           : {}),
     };
@@ -296,19 +354,13 @@ function reasonText({ facts }: Ctx): string {
 }
 
 function delayView(ctx: Ctx, reason: string): DelayView {
-  const { facts, status, tone, clientState } = ctx;
-  const severe = status === 'severely_late';
+  const { status, tone, clientState } = ctx;
   return {
     tone,
     title: 'What’s causing the delay',
-    delayLabel:
-      facts.delayDays > 0
-        ? `Delayed by ${plural(facts.delayDays, 'day')}`
-        : 'A few hours behind schedule',
     reason,
-    reassurance: clientState.cancellation
-      ? 'Your cancellation is being processed.'
-      : severe
+    reassurance:
+      status === 'severely_late'
         ? 'We’re sorry. You can keep waiting, or cancel for a full refund.'
         : 'You don’t need to do anything — this page updates as soon as the carrier does.',
     toggle: {
@@ -322,14 +374,20 @@ function delayView(ctx: Ctx, reason: string): DelayView {
 }
 
 function pendingView(ctx: Ctx): PendingView {
-  const { order, facts, clientState, now } = ctx;
+  const { facts, clientState, now } = ctx;
+  // Only call the wait "normal" when it is: not late, not stale.
+  const behind = facts.severity !== 'none' || facts.stalePending;
   return {
     title: 'Why there’s no tracking yet',
-    body: 'Your order is confirmed. The carrier hasn’t collected the parcel yet, so there are no scans to show — this is normal for new orders.',
+    body: behind
+      ? 'Your order is confirmed, but the carrier hasn’t collected the parcel yet, so there are no scans to show.'
+      : 'Your order is confirmed. The carrier hasn’t collected the parcel yet, so there are no scans to show — this is normal for new orders.',
     nextSteps: [
       'The seller finishes packing your order.',
       'The carrier collects and scans it — live tracking starts here.',
-      `It arrives ${formatWindow(order.promisedWindow, now).value}.`,
+      behind
+        ? 'We confirm a new delivery date as soon as it ships.'
+        : `It arrives ${formatWindowPhrase(facts.expectedWindow, now)}.`,
     ],
     toggle: {
       id: 'notify_tracking_live',
@@ -350,7 +408,7 @@ function pendingView(ctx: Ctx): PendingView {
 }
 
 function actionsFor(ctx: Ctx): Pick<TrackingViewModel, 'primaryAction' | 'secondaryAction'> {
-  const { order, facts, status, clientState } = ctx;
+  const { order, facts, status } = ctx;
   const support = (label: string, emphasis: ActionView['emphasis']): ActionView => ({
     id: 'contact_support',
     label,
@@ -360,8 +418,6 @@ function actionsFor(ctx: Ctx): Pick<TrackingViewModel, 'primaryAction' | 'second
     case 'late':
       return { primaryAction: support('Ask about this delay', 'primary') };
     case 'severely_late':
-      if (clientState.cancellation)
-        return { primaryAction: support('Contact support', 'secondary') };
       return {
         primaryAction: {
           id: 'request_refund_or_cancel',
@@ -370,6 +426,8 @@ function actionsFor(ctx: Ctx): Pick<TrackingViewModel, 'primaryAction' | 'second
         },
         secondaryAction: support('Contact support', 'secondary'),
       };
+    case 'cancelled':
+      return { primaryAction: support('Contact support', 'secondary') };
     case 'delivered':
       return facts.reportProminent
         ? {
@@ -388,12 +446,13 @@ function actionsFor(ctx: Ctx): Pick<TrackingViewModel, 'primaryAction' | 'second
   }
 }
 
-function topicFor({ facts, status, clientState }: Ctx): TopicId {
+function topicFor({ facts, status }: Ctx): TopicId {
   switch (status) {
     case 'late':
-      return 'delayed';
     case 'severely_late':
-      return clientState.cancellation ? 'cancel_refund' : 'delayed';
+      return 'delayed';
+    case 'cancelled':
+      return 'cancel_refund';
     case 'delivered':
       return facts.reportProminent ? 'not_received' : 'other';
     case 'investigating':
@@ -417,9 +476,10 @@ function listItemView(ctx: Ctx, hero: HeroView): OrderListItemView {
         : 'New date to be confirmed';
       break;
     case 'severely_late':
-      statusLine = clientState.cancellation
-        ? 'Cancellation requested'
-        : `${plural(facts.delayDays, 'day')} late · refund available`;
+      statusLine = `${plural(facts.delayDays, 'day')} late · refund available`;
+      break;
+    case 'cancelled':
+      statusLine = hero.headline;
       break;
     case 'preparing':
       statusLine = 'Tracking available soon';
@@ -431,11 +491,14 @@ function listItemView(ctx: Ctx, hero: HeroView): OrderListItemView {
       statusLine = clientState.case ? `Case ${clientState.case.id}` : 'Report received';
       break;
   }
+  const { title, more } = orderTitle(order);
   return {
     id: order.id,
     href: `/orders/${order.id}`,
-    title: orderTitle(order),
-    meta: `#${order.id} · Placed ${formatDate(toMs(order.placedAt))}`,
+    title,
+    ...(more ? { titleMore: more } : {}),
+    orderRef: `#${order.id}`,
+    placedLabel: `Placed ${formatDayMonth(toMs(order.placedAt))}`,
     status,
     tone,
     chip: STATUS_PILL[status],

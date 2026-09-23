@@ -8,6 +8,7 @@ import {
   ReceiptText,
   TriangleAlert,
   Truck,
+  Undo2,
   type LucideIcon,
 } from 'lucide-react';
 import type { ActionId, TrackingStatus } from '@/features/order-tracking/domain/view-model';
@@ -20,6 +21,7 @@ export const STATUS_ICON: Record<TrackingStatus, LucideIcon> = {
   preparing: PackageOpen,
   delivered: CircleCheck,
   investigating: FileSearch,
+  cancelled: Undo2,
 };
 
 export const ACTION_ICON: Record<ActionId, LucideIcon> = {

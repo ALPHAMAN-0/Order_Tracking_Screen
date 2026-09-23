@@ -42,6 +42,12 @@ export function formatDate(ms: number): string {
   return `${weekday}, ${day} ${month}`;
 }
 
+/** "24 Sep" */
+export function formatDayMonth(ms: number): string {
+  const { day, month } = dateParts(ms);
+  return `${day} ${month}`;
+}
+
 /** "Thursday" */
 export function formatWeekdayLong(ms: number): string {
   return longWeekdayFmt.format(ms);
@@ -115,6 +121,16 @@ export function formatWindow(win: EtaWindow, now: number): { value: string; wind
       ? `${a.weekday} ${a.day} – ${b.weekday} ${b.day} ${b.month}`
       : `${a.weekday} ${a.day} ${a.month} – ${b.weekday} ${b.day} ${b.month}`;
   return { value };
+}
+
+/** Mid-sentence window: "tomorrow" | "between Fri 25 and Sun 27 Sep" */
+export function formatWindowPhrase(win: EtaWindow, now: number): string {
+  const start = toMs(win.start);
+  const end = toMs(win.end);
+  if (dhakaDayDiff(start, end) === 0) return formatDayPhrase(end, now);
+  const a = dateParts(start);
+  const b = dateParts(end);
+  return `between ${a.weekday} ${a.day}${a.month === b.month ? '' : ` ${a.month}`} and ${b.weekday} ${b.day} ${b.month}`;
 }
 
 /** "just now" | "12 min ago" | "3 hours ago" | "2 days ago" */

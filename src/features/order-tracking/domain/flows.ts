@@ -64,7 +64,6 @@ export function refundFlowView(order: Order, facts: StatusFacts): RefundFlowView
   const to = formatPayment(order.payment);
   return {
     delayLabel: `Your order is ${plural(facts.delayDays, 'day')} late`,
-    isCod,
     cancelLabel: isCod ? 'Cancel this order' : `Cancel and refund ${amount}`,
     cancelDescription: isCod
       ? 'Nothing has been charged, so there’s nothing to refund.'

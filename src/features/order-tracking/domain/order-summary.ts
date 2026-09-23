@@ -20,17 +20,16 @@ export function itemCount(order: Order): number {
   return order.items.reduce((sum, item) => sum + item.quantity, 0);
 }
 
-/** "Cotton panjabi + 1 more" */
-export function orderTitle(order: Order): string {
+/** { title: "Cotton panjabi", more: "+ 1 more" } — split so only the name truncates. */
+export function orderTitle(order: Order): { title: string; more?: string } {
   const [first, ...rest] = order.items;
-  if (!first) return `Order #${order.id}`;
-  return rest.length ? `${first.name} + ${rest.length} more` : first.name;
+  if (!first) return { title: `Order #${order.id}` };
+  return rest.length ? { title: first.name, more: `+ ${rest.length} more` } : { title: first.name };
 }
 
 export function orderSummaryView(order: Order): OrderSummaryView {
   const hidden = order.items.length - SUMMARY_VISIBLE_ITEMS;
   return {
-    title: orderTitle(order),
     countLabel: plural(itemCount(order), 'item'),
     totalLabel: formatMoney(order.pricing.total),
     items: order.items.slice(0, SUMMARY_VISIBLE_ITEMS).map(itemView),

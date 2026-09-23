@@ -1,7 +1,7 @@
 import { PLACEMENT_LABEL, STEP_LABEL, exceptionShort } from './copy';
-import { formatAgo, formatDateTime, formatDayPhrase } from './format';
+import { formatAgo, formatDateTime, formatDayPhrase, formatWindow } from './format';
 import type { StatusFacts } from './status';
-import { toMs } from './time';
+import { dhakaDayDiff, toMs } from './time';
 import { MILESTONES, type Order, type OrderClientState, type TrackingEvent } from './types';
 import type { Tone, TimelineStepView, TrackingStatus, TrackingViewModel } from './view-model';
 
@@ -69,10 +69,17 @@ export function timelineView(
         step.detail = 'Waiting for the first carrier scan';
       if (key === 'delivered') {
         const noDate =
-          facts.severity !== 'none' && (facts.revisedAlsoPassed || !order.shipment?.revisedWindow);
-        step.detail = noDate
-          ? 'New date to be confirmed'
-          : `Expected ${formatDayPhrase(facts.expectedBy, now)}`;
+          status === 'cancelled' ||
+          (facts.severity !== 'none' && (facts.revisedAlsoPassed || !facts.useRevision));
+        const win = facts.expectedWindow;
+        step.detail =
+          status === 'cancelled'
+            ? 'Order cancelled'
+            : noDate
+              ? 'New date to be confirmed'
+              : dhakaDayDiff(toMs(win.start), toMs(win.end)) === 0
+                ? `Expected ${formatDayPhrase(facts.expectedBy, now)}`
+                : `Expected ${formatWindow(win, now).value}`;
       }
     }
 

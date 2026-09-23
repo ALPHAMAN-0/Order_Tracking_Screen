@@ -98,7 +98,7 @@ describe('status precedence', () => {
     const vm = deriveTrackingView({ order, now: NOW, clientState: EMPTY_CLIENT_STATE });
     expect(vm.status).toBe('late');
     expect(vm.eta.note?.text).toBe('A few hours late');
-    expect(vm.delay?.delayLabel).toBe('A few hours behind schedule');
+    expect(vm.hero.subline).toBe('Running a few hours behind — still on its way.');
   });
 
   it('overdue 4 days with no revision → severely_late, awaiting a new date', () => {
@@ -255,10 +255,10 @@ describe('view model', () => {
     });
     const vm = deriveTrackingView({ order, now: NOW, clientState: EMPTY_CLIENT_STATE });
     expect(vm.primaryAction?.label).toBe('Cancel order');
-    expect(vm.refundFlow?.isCod).toBe(true);
+    expect(vm.refundFlow?.cancelLabel).toBe('Cancel this order');
   });
 
-  it('a cancellation swaps the refund CTA for a banner', () => {
+  it('a cancellation becomes its own state — no more delivery promises', () => {
     const order = makeOrder({ promisedWindow: window(-4), shipment: shipment(window(1)) });
     const cs: OrderClientState = {
       ...EMPTY_CLIENT_STATE,
@@ -269,9 +269,85 @@ describe('view model', () => {
       },
     };
     const vm = deriveTrackingView({ order, now: NOW, clientState: cs });
+    expect(vm.status).toBe('cancelled');
+    expect(vm.hero).toMatchObject({ pill: 'Cancelling', headline: 'Refund on its way' });
+    expect(vm.eta).toMatchObject({
+      label: 'Refund expected',
+      value: 'Within 5–7 business days',
+      window: '৳1,060 to Card •••• 4242',
+    });
+    expect(vm.eta.was).toBeUndefined();
+    expect(vm.cancellationBanner).toMatchObject({
+      title: 'Cancellation requested',
+      reference: 'RF-XYZ234',
+    });
     expect(vm.cancellationBanner?.body).toContain('৳1,060 goes back to Card •••• 4242');
+    expect(vm.delay).toBeUndefined();
     expect(vm.refundFlow).toBeUndefined();
     expect(vm.primaryAction?.id).toBe('contact_support');
+    expect(vm.support.topic).toBe('cancel_refund');
+    expect(vm.timeline.steps.at(-1)?.detail).toBe('Order cancelled');
+    expect(vm.listItem).toMatchObject({ chip: 'Cancelling', statusLine: 'Refund on its way' });
+  });
+
+  it('a COD cancellation says there is nothing to refund', () => {
+    const order = makeOrder({
+      payment: { type: 'cod' },
+      promisedWindow: window(-4),
+      shipment: shipment(window(1)),
+    });
+    const cs: OrderClientState = {
+      ...EMPTY_CLIENT_STATE,
+      cancellation: { id: 'RF-COD234', requestedAt: hoursAgo(0), refund: null },
+    };
+    const vm = deriveTrackingView({ order, now: NOW, clientState: cs });
+    expect(vm.hero.headline).toBe('Order cancelled');
+    expect(vm.eta.value).toBe('Nothing to refund');
+  });
+
+  it('an EARLIER carrier estimate that has passed falls back to the promise (not late)', () => {
+    // Promised in 3 days; carrier said "earlier, yesterday" — and missed it.
+    const order = makeOrder({ promisedWindow: window(3), shipment: shipment(window(-1)) });
+    const vm = deriveTrackingView({ order, now: NOW, clientState: EMPTY_CLIENT_STATE });
+    expect(vm.status).toBe('on_track');
+    expect(vm.eta.value).toBe('Sat, 26 Sep');
+    expect(vm.eta.note).toBeUndefined();
+  });
+
+  it('pending tracking on a late or stale order doesn’t call the wait normal', () => {
+    const base = { shipment: null, events: makeOrder().events.slice(0, 2) };
+    const late = deriveTrackingView({
+      order: makeOrder({ ...base, promisedWindow: window(-1) }),
+      now: NOW,
+      clientState: EMPTY_CLIENT_STATE,
+    });
+    expect(late.pending?.body).not.toMatch(/normal/);
+    expect(late.pending?.nextSteps.at(-1)).toBe(
+      'We confirm a new delivery date as soon as it ships.',
+    );
+
+    const stale = deriveTrackingView({
+      order: makeOrder({ ...base, placedAt: hoursAgo(50), promisedWindow: window(3) }),
+      now: NOW,
+      clientState: EMPTY_CLIENT_STATE,
+    });
+    expect(stale.status).toBe('preparing');
+    expect(stale.hero.subline).toMatch(/longer than usual/);
+    expect(stale.pending?.body).not.toMatch(/normal/);
+  });
+
+  it('a multi-day window reads as a range in the timeline and chat', () => {
+    const order = makeOrder({
+      shipment: null,
+      events: makeOrder().events.slice(0, 2),
+      placedAt: hoursAgo(3),
+      promisedWindow: { start: day(2, '10:00'), end: day(4, '20:00') },
+    });
+    const vm = deriveTrackingView({ order, now: NOW, clientState: EMPTY_CLIENT_STATE });
+    expect(vm.timeline.steps.at(-1)?.detail).toBe('Expected Fri 25 – Sun 27 Sep');
+    expect(vm.support.chatByTopic.where_is_order.reply).toContain(
+      'expected between Fri 25 and Sun 27 Sep',
+    );
   });
 
   it.each([
@@ -297,7 +373,7 @@ describe('view model', () => {
       events: [...makeOrder().events, ev('dlv', 2, { milestone: 'delivered' })],
     });
     const vm = deriveTrackingView({ order, now: NOW, clientState: withCase });
-    expect(vm.caseBanner?.caseId).toBe('CASE-ABC234');
+    expect(vm.caseBanner).toMatchObject({ title: 'Investigation open', reference: 'CASE-ABC234' });
     expect(vm.hero.headline).toBe('We’re looking into it');
     expect(vm.timeline.steps.at(-1)?.note?.text).toContain('CASE-ABC234');
     expect(vm.missingFlow).toBeUndefined();
