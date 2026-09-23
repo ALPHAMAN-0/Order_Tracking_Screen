@@ -71,6 +71,11 @@ export function formatDayLabel(ms: number, now: number): string {
   return relativeDayName(ms, now) ?? formatDate(ms);
 }
 
+/** Mid-sentence form: "today" | "tomorrow" | "yesterday" | "Sat, 26 Sep" */
+export function formatDayPhrase(ms: number, now: number): string {
+  return relativeDayName(ms, now)?.toLowerCase() ?? formatDate(ms);
+}
+
 /** "Tomorrow, Thu 24 Sep" | "Sat, 26 Sep" */
 export function formatDayWithDate(ms: number, now: number): string {
   const rel = relativeDayName(ms, now);
@@ -82,6 +87,11 @@ export function formatDayWithDate(ms: number, now: number): string {
 /** "Today, 12:14 PM" | "Sat, 19 Sep, 3:40 PM" */
 export function formatDateTime(ms: number, now: number): string {
   return `${formatDayLabel(ms, now)}, ${formatTime(ms)}`;
+}
+
+/** Mid-sentence form: "today at 10:56 AM" | "Fri, 25 Sep at 12:43 PM" */
+export function formatDateTimePhrase(ms: number, now: number): string {
+  return `${formatDayPhrase(ms, now)} at ${formatTime(ms)}`;
 }
 
 /**

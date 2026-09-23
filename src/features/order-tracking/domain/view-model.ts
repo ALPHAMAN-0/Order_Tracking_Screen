@@ -86,13 +86,12 @@ export interface DelayView {
 export interface PendingView {
   title: string;
   body: string;
-  expectation: string;
+  nextSteps: string[];
   toggle: ToggleView;
   stale?: { title: string; body: string };
 }
 
 export interface ProofOfDeliveryView {
-  deliveredLabel: string;
   placementLabel: string;
   receivedBy?: string;
   maskedAddress: string;

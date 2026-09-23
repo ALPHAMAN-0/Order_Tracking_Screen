@@ -3,6 +3,7 @@ import { missingFlowView, refundFlowView } from './flows';
 import {
   formatDate,
   formatDateTime,
+  formatDateTimePhrase,
   formatMoney,
   formatPayment,
   formatWeekdayLong,
@@ -58,7 +59,7 @@ export function deriveTrackingView({ order, now, clientState }: DeriveInput): Tr
     ...(facts.delivered ? {} : { etaLabel: etaPhrase(ctx) }),
     ...(facts.severity !== 'none' ? { reason } : {}),
     ...(facts.deliveredAt !== null
-      ? { deliveredLabel: formatDateTime(facts.deliveredAt, now) }
+      ? { deliveredLabel: formatDateTimePhrase(facts.deliveredAt, now) }
       : {}),
     ...(clientState.case && facts.delivered ? { caseId: clientState.case.id } : {}),
   };
@@ -87,7 +88,6 @@ export function deriveTrackingView({ order, now, clientState }: DeriveInput): Tr
 
   if (facts.delivered && facts.deliveredAt !== null) {
     vm.proofOfDelivery = {
-      deliveredLabel: formatDateTime(facts.deliveredAt, now),
       placementLabel: pod ? PLACEMENT_LABEL[pod.placement] : 'Delivered',
       ...(pod?.receivedBy ? { receivedBy: pod.receivedBy } : {}),
       maskedAddress: maskAddress(order.shippingAddress),
@@ -104,7 +104,7 @@ export function deriveTrackingView({ order, now, clientState }: DeriveInput): Tr
       caseId: clientState.case.id,
       title: 'Investigation open',
       body: 'We’ve asked the carrier to check the rider’s GPS trail and delivery photo.',
-      nextUpdateLabel: `Next update by ${formatDateTime(toMs(clientState.case.nextUpdateBy), now)}`,
+      nextUpdateLabel: `Next update by ${formatDateTimePhrase(toMs(clientState.case.nextUpdateBy), now)}`,
       steps: flow?.nextSteps ?? [],
     };
   }
@@ -198,8 +198,10 @@ function heroView(ctx: Ctx): HeroView {
     case 'severely_late':
       return {
         pill,
-        headline: 'Significantly delayed',
-        subline: `${plural(facts.delayDays, 'day')} past the original date. We’re sorry.`,
+        headline: `${plural(facts.delayDays, 'day')} late`,
+        subline: hasNewEstimate(ctx)
+          ? `Now arriving ${dayPhrase(facts.expectedBy, now)}. We’re sorry for the wait.`
+          : 'We’re chasing the carrier for a new date. We’re sorry for the wait.',
       };
     case 'preparing':
       return {
@@ -209,11 +211,12 @@ function heroView(ctx: Ctx): HeroView {
       };
     case 'delivered': {
       const pod = ctx.order.shipment?.proofOfDelivery;
-      const when = formatDateTime(facts.deliveredAt ?? now, now);
+      const at = facts.deliveredAt ?? now;
+      const rel = relativeDayName(at, now);
       return {
         pill,
-        headline: 'Delivered',
-        subline: pod ? `${when} · ${PLACEMENT_LABEL[pod.placement]}` : when,
+        headline: rel ? `Delivered ${rel.toLowerCase()}` : `Delivered ${formatDate(at)}`,
+        subline: pod ? PLACEMENT_LABEL[pod.placement] : 'Delivered to your address',
       };
     }
     case 'investigating': {
@@ -222,7 +225,7 @@ function heroView(ctx: Ctx): HeroView {
         pill,
         headline: 'We’re looking into it',
         subline: c
-          ? `Case ${c.id} · update by ${formatDateTime(toMs(c.nextUpdateBy), now)}`
+          ? `Case ${c.id} · update by ${formatDateTimePhrase(toMs(c.nextUpdateBy), now)}`
           : 'Your report is with our team.',
       };
     }
@@ -297,7 +300,7 @@ function delayView(ctx: Ctx, reason: string): DelayView {
   const severe = status === 'severely_late';
   return {
     tone,
-    title: severe ? 'Your order is significantly delayed' : 'Your order is running late',
+    title: 'What’s causing the delay',
     delayLabel:
       facts.delayDays > 0
         ? `Delayed by ${plural(facts.delayDays, 'day')}`
@@ -306,8 +309,8 @@ function delayView(ctx: Ctx, reason: string): DelayView {
     reassurance: clientState.cancellation
       ? 'Your cancellation is being processed.'
       : severe
-        ? 'You can keep waiting, or cancel for a full refund.'
-        : 'No action needed — we’ll text you if anything changes.',
+        ? 'We’re sorry. You can keep waiting, or cancel for a full refund.'
+        : 'You don’t need to do anything — this page updates as soon as the carrier does.',
     toggle: {
       id: 'notify_changes',
       label: 'Notify me of changes',
@@ -321,9 +324,13 @@ function delayView(ctx: Ctx, reason: string): DelayView {
 function pendingView(ctx: Ctx): PendingView {
   const { order, facts, clientState, now } = ctx;
   return {
-    title: 'Tracking will appear soon',
-    body: 'Your order is confirmed and being packed. Live tracking starts as soon as the carrier scans your parcel — usually within 24 hours of packing.',
-    expectation: `Estimated delivery: ${formatWindow(order.promisedWindow, now).value}`,
+    title: 'Why there’s no tracking yet',
+    body: 'Your order is confirmed. The carrier hasn’t collected the parcel yet, so there are no scans to show — this is normal for new orders.',
+    nextSteps: [
+      'The seller finishes packing your order.',
+      'The carrier collects and scans it — live tracking starts here.',
+      `It arrives ${formatWindow(order.promisedWindow, now).value}.`,
+    ],
     toggle: {
       id: 'notify_tracking_live',
       label: 'Notify me when tracking is live',

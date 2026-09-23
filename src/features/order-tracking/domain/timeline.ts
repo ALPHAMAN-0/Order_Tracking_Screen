@@ -1,5 +1,5 @@
 import { PLACEMENT_LABEL, STEP_LABEL, exceptionShort } from './copy';
-import { formatAgo, formatDateTime, formatDayLabel } from './format';
+import { formatAgo, formatDateTime, formatDayPhrase } from './format';
 import type { StatusFacts } from './status';
 import { toMs } from './time';
 import { MILESTONES, type Order, type OrderClientState, type TrackingEvent } from './types';
@@ -52,16 +52,15 @@ export function timelineView(
     if (state === 'complete' && event?.location) step.detail = event.location;
 
     if (state === 'current' && key !== 'delivered') {
+      const exception = facts.severity !== 'none' ? facts.latestException : null;
       if (status === 'preparing' && key === 'processing') {
         step.detail = 'The seller is packing your order';
-      } else if (facts.latestEvent) {
+      } else if (facts.latestEvent && facts.latestEvent !== exception) {
+        // The exception gets its own note below; don't say it twice.
         step.detail = place(facts.latestEvent);
       }
-      if (facts.severity !== 'none' && facts.latestException?.exception) {
-        step.note = {
-          tone,
-          text: exceptionShort(facts.latestException.exception, facts.latestException.location),
-        };
+      if (exception?.exception) {
+        step.note = { tone, text: exceptionShort(exception.exception, exception.location) };
       }
     }
 
@@ -73,7 +72,7 @@ export function timelineView(
           facts.severity !== 'none' && (facts.revisedAlsoPassed || !order.shipment?.revisedWindow);
         step.detail = noDate
           ? 'New date to be confirmed'
-          : `Expected ${formatDayLabel(facts.expectedBy, now)}`;
+          : `Expected ${formatDayPhrase(facts.expectedBy, now)}`;
       }
     }
 

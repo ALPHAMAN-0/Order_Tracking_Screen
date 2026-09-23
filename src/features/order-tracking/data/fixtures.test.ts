@@ -70,7 +70,14 @@ describe('fixtures are now-relative and stable', () => {
       was: 'Tue, 22 Sep',
       note: { text: 'Delayed by 2 days' },
     });
-    expect(vm('SW-39215').hero.subline).toBe('5 days past the original date. We’re sorry.');
+    expect(vm('SW-39215').hero).toMatchObject({
+      headline: '5 days late',
+      subline: 'Now arriving tomorrow. We’re sorry for the wait.',
+    });
+    expect(vm('SW-40107').hero).toMatchObject({
+      headline: 'Delivered today',
+      subline: 'Left at front door',
+    });
     expect(vm('SW-40290').eta.value).toBe('Fri 25 – Sun 27 Sep');
     expect(vm('SW-40211').hero.headline).toBe('Arriving tomorrow');
   });

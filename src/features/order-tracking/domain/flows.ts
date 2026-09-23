@@ -1,6 +1,6 @@
 import { CASE_UPDATE_HOURS, MISSING_WAIT_HOURS } from './constants';
 import { MISSING_REASONS, PLACEMENT_LABEL } from './copy';
-import { formatDateTime, formatMoney, formatPayment, plural } from './format';
+import { formatDateTimePhrase, formatMoney, formatPayment, plural } from './format';
 import { makeRef } from './ids';
 import type { StatusFacts } from './status';
 import { HOUR, toIso } from './time';
@@ -20,9 +20,9 @@ export function missingFlowView(
   const placement = pod ? PLACEMENT_LABEL[pod.placement] : 'Marked delivered';
   return {
     orderId: order.id,
-    deliveredLabel: formatDateTime(facts.deliveredAt, now),
+    deliveredLabel: formatDateTimePhrase(facts.deliveredAt, now),
     placementLabel: placement,
-    waitUntilLabel: formatDateTime(waitUntil, now),
+    waitUntilLabel: formatDateTimePhrase(waitUntil, now),
     suggestWaiting: now < waitUntil,
     checklist: [
       pod?.placement === 'front_door'
@@ -30,7 +30,6 @@ export function missingFlowView(
         : 'Check around your door, porch and letterbox.',
       'Ask building reception, security or neighbours if they took it in.',
       'Ask anyone at home if they signed for it or moved it.',
-      'Riders sometimes mark parcels delivered a little early — it may still turn up today.',
     ],
     reasons: MISSING_REASONS,
     nextSteps: [

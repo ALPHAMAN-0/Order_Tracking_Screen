@@ -84,7 +84,7 @@ export function chatScript(facts: SupportFacts, topic: TopicId): ChatScript {
               'The carrier is reviewing the rider’s GPS trail and delivery photo now. If the parcel isn’t found, we’ll send a replacement or a full refund — your choice.',
           }
         : {
-            opening: `${hi} I see ${order} was marked delivered${facts.deliveredLabel ? ` (${facts.deliveredLabel})` : ''}, but it hasn’t reached you. Let’s sort that out.`,
+            opening: `${hi} I see ${order} was marked delivered${facts.deliveredLabel ? ` ${facts.deliveredLabel}` : ''}, but it hasn’t reached you. Let’s sort that out.`,
             draft: 'The parcel isn’t here. What should I do?',
             reply:
               'Sorry about that. Please check with reception and neighbours first. If it’s still missing, tap “I didn’t receive it” on the tracking page and I’ll open an investigation right away.',
