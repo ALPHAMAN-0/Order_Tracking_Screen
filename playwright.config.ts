@@ -27,10 +27,11 @@ export default defineConfig({
       use: { ...devices['Pixel 7'], viewport: { width: 430, height: 932 } },
     },
   ],
+  // Serves the production build: run `npm run build` first (the test:e2e script does).
   webServer: {
-    command: isCI ? `npm run start -- -p ${PORT}` : `npm run build && npm run start -- -p ${PORT}`,
+    command: `npm run start -- -p ${PORT}`,
     url: `http://127.0.0.1:${PORT}`,
     reuseExistingServer: !isCI,
-    timeout: 180_000,
+    timeout: 60_000,
   },
 });
