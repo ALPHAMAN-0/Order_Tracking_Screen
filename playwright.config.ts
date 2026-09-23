@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 3100;
 const isCI = !!process.env.CI;
+/** Set BASE_URL to test a deployed site instead of a local production build. */
+const remote = process.env.BASE_URL;
 
 export default defineConfig({
   testDir: 'e2e',
@@ -11,7 +13,7 @@ export default defineConfig({
   reporter: isCI ? [['github'], ['html', { open: 'never' }]] : 'list',
   grepInvert: process.env.SCREENSHOTS ? undefined : /@screens/,
   use: {
-    baseURL: `http://127.0.0.1:${PORT}`,
+    baseURL: remote ?? `http://127.0.0.1:${PORT}`,
     trace: 'retain-on-failure',
     // A non-Dhaka browser zone proves every date is formatted for Asia/Dhaka explicitly.
     timezoneId: 'America/New_York',
@@ -27,11 +29,15 @@ export default defineConfig({
       use: { ...devices['Pixel 7'], viewport: { width: 430, height: 932 } },
     },
   ],
-  // Serves the production build: run `npm run build` first (the test:e2e script does).
-  webServer: {
-    command: `npm run start -- -p ${PORT}`,
-    url: `http://127.0.0.1:${PORT}`,
-    reuseExistingServer: !isCI,
-    timeout: 60_000,
-  },
+  ...(remote
+    ? {}
+    : {
+        // Serves the production build: run `npm run build` first (the test:e2e script does).
+        webServer: {
+          command: `npm run start -- -p ${PORT}`,
+          url: `http://127.0.0.1:${PORT}`,
+          reuseExistingServer: !isCI,
+          timeout: 60_000,
+        },
+      }),
 });
