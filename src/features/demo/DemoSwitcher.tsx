@@ -91,6 +91,7 @@ export function DemoSwitcher() {
             <li key={s.label}>
               <Link
                 href={s.href}
+                prefetch={false}
                 onClick={close}
                 className={cn(linkCls, 'border-border text-sm font-medium text-fg')}
               >
