@@ -1,6 +1,6 @@
 # AI Prompt History
 
-**AI tool used:** Claude Code (Claude desktop app, Code tab). Model: Claude Opus 5.5.
+**AI tool used:** Claude Code (Claude desktop app, Code tab). Model: Claude sonnet 4.6.
 
 Below is every prompt I sent, in the exact order sent. The text is copied as typed, including typos. Nothing is omitted, rewritten, combined or summarised. Answers I gave to the assistant's multiple-choice questions are listed as well, because they were sent to the AI.
 
