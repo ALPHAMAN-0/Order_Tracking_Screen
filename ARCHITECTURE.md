@@ -65,7 +65,7 @@ flowchart TD
 
 - Dev: `npm run dev` → `src/app/layout.tsx`, `src/app/page.tsx`, `src/app/orders/[id]/page.tsx`
 - Prod: `npm run build && npm start` (all routes prerendered; unknown order IDs → 404 via `dynamicParams = false`)
-- Live: https://order-tracking-screen.vercel.app
+- Live: https://order-tracking-screen-gamma.vercel.app
 
 ## Conventions
 
