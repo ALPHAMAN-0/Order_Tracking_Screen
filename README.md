@@ -2,6 +2,18 @@
 
 A redesigned order tracking experience for mobile, built so a customer can tell **what’s happening, when it arrives, and what to do next** at a glance. The same screen adapts to a delayed order, a parcel marked delivered that never arrived, and an order that has no tracking yet.
 
+## Architecture / How it Works
+
+```mermaid
+flowchart LR
+    A[User] --> B[Order Tracking Screen]
+    B --> C{Logic}
+    C --> D[(Data)]
+    C --> E[Output]
+    D --> C
+```
+
+
 **Live demo:** https://order-tracking-screen-gamma.vercel.app
 **Repository:** https://github.com/ALPHAMAN-0/Order_Tracking_Screen
 
