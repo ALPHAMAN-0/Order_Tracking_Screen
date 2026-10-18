@@ -5,12 +5,25 @@ A redesigned order tracking experience for mobile, built so a customer can tell 
 ## Architecture / How it Works
 
 ```mermaid
-flowchart LR
-    A[User] --> B[Order Tracking Screen]
-    B --> C{Logic}
-    C --> D[(Data)]
-    C --> E[Output]
-    D --> C
+flowchart TD
+    AppRoutes --> OrdersScreen
+    AppRoutes --> TrackingScreen
+    AppRoutes --> DemoSwitcher
+    AppRoutes --> OrderRepository
+    OrdersScreen --> TrackingHooks
+    OrdersScreen --> UIPrimitives
+    TrackingScreen --> TrackingHooks
+    TrackingScreen --> SheetsAndFlows
+    TrackingScreen --> UIPrimitives
+    SheetsAndFlows --> UIPrimitives
+    TrackingHooks --> OrderRepository
+    TrackingHooks --> ClientStateStore
+    TrackingHooks --> TrackingDomain
+    OrderRepository --> MockFixtures
+    MockFixtures --> TrackingDomain
+    DemoSwitcher --> OrderRepository
+    DemoSwitcher --> ClientStateStore
+    DemoSwitcher --> UIPrimitives
 ```
 
 
